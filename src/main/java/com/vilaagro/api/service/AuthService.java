@@ -205,11 +205,11 @@ public class AuthService {
             // Gera refresh token
             String refreshToken = jwtService.generateRefreshToken(userPrincipal);
 
-            // Cria cookies seguros HttpOnly
+            // Cria cookies seguros HttpOnly (Secure=false para desenvolvimento local)
             Cookie accessTokenCookie = createCookie("accessToken", accessToken,
-                                                  (int) (accessTokenExpiration / 1000), true, true);
+                                                  (int) (accessTokenExpiration / 1000), true, false);
             Cookie refreshTokenCookie = createCookie("refreshToken", refreshToken,
-                                                   (int) (refreshTokenExpiration / 1000), true, true);
+                                                   (int) (refreshTokenExpiration / 1000), true, false);
 
             // Adiciona cookies na resposta
             response.addCookie(accessTokenCookie);
@@ -230,9 +230,10 @@ public class AuthService {
         Cookie cookie = new Cookie(name, value);
         cookie.setMaxAge(maxAge);
         cookie.setHttpOnly(httpOnly);
-        cookie.setSecure(secure); // Em produção, sempre true para HTTPS
+        cookie.setSecure(secure); // false em desenvolvimento (HTTP), true em produção (HTTPS)
         cookie.setPath("/");
-        cookie.setAttribute("SameSite", "Strict"); // Proteção contra CSRF
+        // SameSite=Lax permite cookies em requisições cross-site GET (melhor para desenvolvimento)
+        cookie.setAttribute("SameSite", "Lax");
         return cookie;
     }
 
