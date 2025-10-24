@@ -3,11 +3,14 @@ package com.vilaagro.api.service;
 import com.vilaagro.api.dto.UserCreateDTO;
 import com.vilaagro.api.dto.UserResponseDTO;
 import com.vilaagro.api.dto.UserUpdateDTO;
+import com.vilaagro.api.dto.StatusUpdateDTO;
 import com.vilaagro.api.exception.EmailAlreadyExistsException;
 import com.vilaagro.api.exception.ResourceNotFoundException;
 import com.vilaagro.api.model.User;
+import com.vilaagro.api.model.AccountStatus;
 import com.vilaagro.api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -62,6 +65,17 @@ public class UserService {
     }
 
     /**
+     * Lista usuários por status de documentos
+     */
+    @Transactional(readOnly = true)
+    public List<UserResponseDTO> findByDocumentsStatus(AccountStatus status) {
+        return userRepository.findByDocumentsStatus(status)
+                .stream()
+                .map(this::convertToResponseDTO)
+                .collect(Collectors.toList());
+    }
+
+    /**
      * Busca um usuário por ID
      */
     @Transactional(readOnly = true)
@@ -96,7 +110,8 @@ public class UserService {
             user.setEmail(updateDTO.getEmail());
         }
         if (updateDTO.getPassword() != null) {
-            user.setPassword(updateDTO.getPassword()); // Em produção, hash a senha aqui
+            // Hash da senha quando atualizada
+            user.setPassword(passwordEncoder.encode(updateDTO.getPassword()));
         }
         if (updateDTO.getDocumentsStatus() != null) {
             user.setDocumentsStatus(updateDTO.getDocumentsStatus());
@@ -110,6 +125,20 @@ public class UserService {
     }
 
     /**
+     * Atualiza apenas o status dos documentos de um usuário (usado por administradores)
+     */
+    public UserResponseDTO updateUserStatus(UUID id, StatusUpdateDTO statusUpdateDTO) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário", "id", id));
+
+        user.setDocumentsStatus(statusUpdateDTO.getStatus());
+        // Comentário e histórico podem ser implementados posteriormente
+
+        User saved = userRepository.save(user);
+        return convertToResponseDTO(saved);
+    }
+
+    /**
      * Deleta um usuário
      */
     public void deleteUser(UUID id) {
@@ -117,6 +146,20 @@ public class UserService {
             throw new ResourceNotFoundException("Usuário", "id", id);
         }
         userRepository.deleteById(id);
+    }
+
+    /**
+     * Obtém o usuário atualmente autenticado a partir do SecurityContext
+     */
+    @Transactional(readOnly = true)
+    public UserResponseDTO getCurrentAuthenticatedUser() {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (principal instanceof com.vilaagro.api.service.CustomUserDetailsService.CustomUserPrincipal) {
+            com.vilaagro.api.service.CustomUserDetailsService.CustomUserPrincipal custom =
+                    (com.vilaagro.api.service.CustomUserDetailsService.CustomUserPrincipal) principal;
+            return convertToResponseDTO(custom.getUser());
+        }
+        throw new RuntimeException("Usuário não autenticado");
     }
 
     /**

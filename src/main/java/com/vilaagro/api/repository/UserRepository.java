@@ -2,6 +2,7 @@ package com.vilaagro.api.repository;
 
 import com.vilaagro.api.model.User;
 import com.vilaagro.api.model.UserType;
+import com.vilaagro.api.model.AccountStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -34,4 +35,9 @@ public interface UserRepository extends JpaRepository<User, UUID> {
      * Busca usuários por ponto de venda
      */
     List<User> findBySalePointId(UUID salePointId);
+
+    /**
+     * Busca usuários por status dos documentos (PENDENTE, APROVADO, etc.)
+     */
+    List<User> findByDocumentsStatus(AccountStatus documentsStatus);
 }

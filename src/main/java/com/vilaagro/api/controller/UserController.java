@@ -1,8 +1,10 @@
 package com.vilaagro.api.controller;
 
+import com.vilaagro.api.dto.StatusUpdateDTO;
 import com.vilaagro.api.dto.UserCreateDTO;
 import com.vilaagro.api.dto.UserResponseDTO;
 import com.vilaagro.api.dto.UserUpdateDTO;
+import com.vilaagro.api.model.AccountStatus;
 import com.vilaagro.api.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -46,6 +48,16 @@ public class UserController {
     }
 
     /**
+     * Lista usuários com status PENDENTE - Apenas administradores
+     */
+    @GetMapping("/pending")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<List<UserResponseDTO>> getPendingUsers() {
+        List<UserResponseDTO> pending = userService.findByDocumentsStatus(AccountStatus.PENDING);
+        return ResponseEntity.ok(pending);
+    }
+
+    /**
      * Busca um usuário por ID - Usuários autenticados podem ver qualquer perfil
      */
     @GetMapping("/{id}")
@@ -67,6 +79,19 @@ public class UserController {
     }
 
     /**
+     * Atualiza apenas o status dos documentos de um usuário - Apenas administradores
+     */
+    @PutMapping("/{id}/status")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<UserResponseDTO> updateUserStatus(
+            @PathVariable UUID id,
+            @Valid @RequestBody StatusUpdateDTO statusUpdateDTO
+    ) {
+        UserResponseDTO updated = userService.updateUserStatus(id, statusUpdateDTO);
+        return ResponseEntity.ok(updated);
+    }
+
+    /**
      * Deleta um usuário - Apenas administradores
      */
     @DeleteMapping("/{id}")
@@ -74,5 +99,24 @@ public class UserController {
     public ResponseEntity<Void> deleteUser(@PathVariable UUID id) {
         userService.deleteUser(id);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Retorna o perfil do usuário atual (a partir do token) - Usuário autenticado
+     */
+    @GetMapping("/me")
+    public ResponseEntity<UserResponseDTO> getMyProfile() {
+        UserResponseDTO current = userService.getCurrentAuthenticatedUser();
+        return ResponseEntity.ok(current);
+    }
+
+    /**
+     * Atualiza o perfil do usuário atual - Usuário autenticado
+     */
+    @PutMapping("/me")
+    public ResponseEntity<UserResponseDTO> updateMyProfile(@Valid @RequestBody UserUpdateDTO updateDTO) {
+        UserResponseDTO current = userService.getCurrentAuthenticatedUser();
+        UserResponseDTO updated = userService.updateUser(current.getId(), updateDTO);
+        return ResponseEntity.ok(updated);
     }
 }
