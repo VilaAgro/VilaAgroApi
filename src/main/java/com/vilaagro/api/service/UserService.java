@@ -189,6 +189,26 @@ public class UserService {
         throw new RuntimeException("Usuário não autenticado");
     }
 
+    @Transactional(readOnly = true)
+    public List<UserResponseDTO> getAllActiveMerchants() {
+        return userRepository.findByDocumentsStatus(AccountStatus.ACTIVE)
+                .stream()
+                .map(this::convertToResponseDTO)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Busca um perfil público de comerciante por ID,
+     * somente se ele estiver ATIVO (RF-A.3)
+     */
+    @Transactional(readOnly = true)
+    public UserResponseDTO getActiveMerchantById(UUID id) {
+        User user = userRepository.findByIdAndDocumentsStatus(id, AccountStatus.ACTIVE)
+                .orElseThrow(() -> new ResourceNotFoundException("Comerciante", "id", id));
+
+        return convertToResponseDTO(user);
+    }
+
     /**
      * Converte User para UserResponseDTO
      * Método público para uso em outros serviços
