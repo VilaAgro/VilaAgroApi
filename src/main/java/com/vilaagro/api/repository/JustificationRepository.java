@@ -17,4 +17,6 @@ public interface JustificationRepository extends JpaRepository<JustificationForA
     List<JustificationForAbsence> findPendingJustifications();
 
     long countByIsApprovedIsNull();
+
+
 }
