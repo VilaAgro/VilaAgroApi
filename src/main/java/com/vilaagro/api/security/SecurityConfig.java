@@ -80,7 +80,8 @@ public class SecurityConfig {
                                 "/actuator/health",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
-                                "/h2-console/**"
+                                "/h2-console/**",
+                                "/api/public/**"
                         ).permitAll()
 
                         // Todas as outras requisições requerem autenticação
