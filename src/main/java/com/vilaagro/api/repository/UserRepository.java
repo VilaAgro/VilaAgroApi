@@ -40,4 +40,6 @@ public interface UserRepository extends JpaRepository<User, UUID> {
      * Busca usuários por status dos documentos (PENDENTE, APROVADO, etc.)
      */
     List<User> findByDocumentsStatus(AccountStatus documentsStatus);
+
+    long countByDocumentsStatus(AccountStatus documentsStatus);
 }
