@@ -40,11 +40,17 @@ public class UserService {
             throw new EmailAlreadyExistsException(createDTO.getEmail());
         }
 
+        // ***** CORREÇÃO AQUI *****
+        // O UserService DEVE ser o responsável por hashar a senha
+        String hashedPassword = passwordEncoder.encode(createDTO.getPassword());
+        // ***** FIM DA CORREÇÃO *****
+
+
         User user = User.builder()
                 .salePointId(createDTO.getSalePointId())
                 .name(createDTO.getName())
                 .email(createDTO.getEmail())
-                .password(createDTO.getPassword()) // Senha já hashada pelo AuthService
+                .password(hashedPassword)
                 .documentsStatus(createDTO.getDocumentsStatus())
                 .type(createDTO.getType())
                 .build();
@@ -52,7 +58,6 @@ public class UserService {
         User savedUser = userRepository.save(user);
         return convertToResponseDTO(savedUser);
     }
-
     /**
      * Lista todos os usuários
      */
