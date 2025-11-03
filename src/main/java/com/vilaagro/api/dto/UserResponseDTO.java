@@ -23,6 +23,7 @@ public class UserResponseDTO {
     private UUID salePointId;
     private String name;
     private String email;
+    private String cpf;
     private AccountStatus documentsStatus;
     private UserType type;
     private LocalDateTime createdAt;

@@ -12,6 +12,9 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.web.multipart.MultipartFile;
+
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -27,6 +30,7 @@ public class AttendanceService {
     private final JustificationRepository justificationRepository;
     private final UserRepository userRepository;
     private final UserService userService;
+    private final FileStorageService fileStorageService;
 
     public List<AbsenceResponseDTO> registerAbsences(AbsenceRegisterDTO registerDTO) {
         List<Absence> createdAbsences = new ArrayList<>();
@@ -44,6 +48,7 @@ public class AttendanceService {
                 Absence absence = Absence.builder()
                         .user(user)
                         .date(registerDTO.getDate())
+                        .type(AbsenceType.REGISTERED)
                         .isAccepted(false)
                         .build();
                 createdAbsences.add(absenceRepository.save(absence));
@@ -68,7 +73,12 @@ public class AttendanceService {
                 .collect(Collectors.toList());
     }
 
-    public JustificationResponseDTO submitJustification(UUID absenceId, JustificationCreateDTO createDTO, User currentUser) {
+    public JustificationResponseDTO submitJustification(
+            UUID absenceId, 
+            JustificationCreateDTO createDTO, 
+            MultipartFile file,
+            User currentUser
+    ) {
         Absence absence = absenceRepository.findById(absenceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Ausência", "id", absenceId));
 
@@ -76,15 +86,38 @@ public class AttendanceService {
             throw new AccessDeniedException("Você não tem permissão para justificar esta ausência.");
         }
 
-        if (justificationRepository.existsByAbsenceId(absenceId)) {
-            throw new IllegalStateException("Esta ausência já possui uma justificativa.");
+        // Verifica se já existe justificativa
+        JustificationForAbsence justification = absence.getJustification();
+        
+        // Processa upload do arquivo (se fornecido)
+        String filePath = null;
+        String originalFileName = null;
+        
+        if (file != null && !file.isEmpty()) {
+            filePath = fileStorageService.storeFile(file, "justifications/" + currentUser.getId());
+            originalFileName = file.getOriginalFilename();
+            log.info("Arquivo anexado à justificação: {}", originalFileName);
         }
 
-        JustificationForAbsence justification = JustificationForAbsence.builder()
-                .absence(absence)
-                .description(createDTO.getDescription())
-                .isApproved(null) // Pendente de análise
-                .build();
+        if (justification != null) {
+            // Atualiza justificativa existente
+            justification.setDescription(createDTO.getDescription());
+            if (filePath != null) {
+                justification.setFilePath(filePath);
+                justification.setOriginalFileName(originalFileName);
+            }
+            log.info("Justificativa atualizada para ausência: {}", absenceId);
+        } else {
+            // Cria nova justificativa
+            justification = JustificationForAbsence.builder()
+                    .absence(absence)
+                    .description(createDTO.getDescription())
+                    .filePath(filePath)
+                    .originalFileName(originalFileName)
+                    .isApproved(null) // Pendente de análise
+                    .build();
+            log.info("Nova justificativa criada para ausência: {}", absenceId);
+        }
 
         JustificationForAbsence saved = justificationRepository.save(justification);
 
@@ -121,5 +154,121 @@ public class AttendanceService {
         justificationRepository.save(justification);
 
         return AbsenceResponseDTO.fromEntity(absence);
+    }
+
+    /**
+     * Retorna resumo de frequência do usuário (últimos 12 meses)
+     */
+    @Transactional(readOnly = true)
+    public AttendanceSummaryDTO getAttendanceSummary(UUID userId) {
+        if (!userRepository.existsById(userId)) {
+            throw new ResourceNotFoundException("Usuário", "id", userId);
+        }
+
+        // Data de 12 meses atrás
+        LocalDate twelveMonthsAgo = LocalDate.now().minusMonths(12);
+
+        // Busca todas as ausências dos últimos 12 meses
+        List<Absence> absences = absenceRepository.findByUserIdOrderByDateDesc(userId)
+                .stream()
+                .filter(a -> a.getDate().isAfter(twelveMonthsAgo) || a.getDate().isEqual(twelveMonthsAgo))
+                .collect(Collectors.toList());
+
+        int totalAbsences = absences.size();
+        int justifiedAbsences = (int) absences.stream()
+                .filter(Absence::getIsAccepted)
+                .count();
+        int unjustifiedAbsences = totalAbsences - justifiedAbsences;
+
+        // Calcula faltas consecutivas
+        int consecutiveAbsences = calculateConsecutiveAbsences(absences);
+
+        // Consideramos "em conformidade" se:
+        // - Tem menos de 3 faltas injustificadas OU
+        // - Todas as faltas foram justificadas
+        boolean isCompliant = unjustifiedAbsences < 3;
+
+        return AttendanceSummaryDTO.builder()
+                .totalAbsences(totalAbsences)
+                .justifiedAbsences(justifiedAbsences)
+                .unjustifiedAbsences(unjustifiedAbsences)
+                .consecutiveAbsences(consecutiveAbsences)
+                .isCompliant(isCompliant)
+                .build();
+    }
+
+    /**
+     * Calcula o número máximo de faltas consecutivas
+     */
+    private int calculateConsecutiveAbsences(List<Absence> absences) {
+        if (absences.isEmpty()) {
+            return 0;
+        }
+
+        // Ordena por data (mais recente primeiro)
+        List<LocalDate> dates = absences.stream()
+                .map(Absence::getDate)
+                .sorted((d1, d2) -> d2.compareTo(d1))
+                .collect(Collectors.toList());
+
+        int maxConsecutive = 1;
+        int currentConsecutive = 1;
+
+        for (int i = 1; i < dates.size(); i++) {
+            LocalDate current = dates.get(i);
+            LocalDate previous = dates.get(i - 1);
+
+            // Verifica se as datas são consecutivas (considerando apenas dias úteis/feiras)
+            // Assumindo que feiras são semanais (7 dias de diferença)
+            if (previous.minusDays(7).equals(current)) {
+                currentConsecutive++;
+                maxConsecutive = Math.max(maxConsecutive, currentConsecutive);
+            } else {
+                currentConsecutive = 1;
+            }
+        }
+
+        return maxConsecutive;
+    }
+
+    /**
+     * Comerciante notifica ausência futura
+     */
+    public AbsenceResponseDTO notifyAbsence(UUID userId, AbsenceNotificationDTO notificationDTO) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário", "id", userId));
+
+        // Verifica se já existe ausência registrada para esta data
+        if (absenceRepository.findByUserIdAndDate(userId, notificationDTO.getAbsenceDate()).isPresent()) {
+            throw new IllegalStateException("Já existe uma ausência registrada para esta data");
+        }
+
+        // Cria a ausência notificada (avisada com antecedência)
+        Absence absence = Absence.builder()
+                .user(user)
+                .date(notificationDTO.getAbsenceDate())
+                .type(AbsenceType.NOTIFIED)
+                .isAccepted(false) // Pendente de aprovação do admin
+                .build();
+
+        Absence savedAbsence = absenceRepository.save(absence);
+
+        // Se há motivo, cria a justificativa automaticamente
+        if (notificationDTO.getReason() != null && !notificationDTO.getReason().trim().isEmpty()) {
+            JustificationForAbsence justification = JustificationForAbsence.builder()
+                    .absence(savedAbsence)
+                    .description(notificationDTO.getReason())
+                    .isApproved(null) // Pendente de análise
+                    .build();
+
+            JustificationForAbsence savedJustification = justificationRepository.save(justification);
+            savedAbsence.setJustification(savedJustification);
+        }
+
+        log.info("Ausência notificada: usuário={}, data={}", userId, notificationDTO.getAbsenceDate());
+        
+        // TODO: Enviar notificação para admin sobre a ausência notificada
+        
+        return AbsenceResponseDTO.fromEntity(savedAbsence);
     }
 }

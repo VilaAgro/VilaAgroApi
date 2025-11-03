@@ -35,11 +35,12 @@ public class JustificationForAbsence {
     @Column(columnDefinition = "TEXT", nullable = false)
     private String description;
 
-    // O campo 'annex' (anexo) é 'bytea'.
-    // Implementar upload de arquivos (multipart/form-data) é complexo.
-    // Vamos focar na 'description' por enquanto.
-    @Column(name = "annex")
-    private byte[] annex;
+    // Caminho do arquivo anexado (se houver)
+    @Column(name = "file_path", length = 500)
+    private String filePath;
+
+    @Column(name = "original_file_name", length = 255)
+    private String originalFileName;
 
     @Column(name = "is_approved")
     private Boolean isApproved;

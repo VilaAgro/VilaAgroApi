@@ -30,6 +30,8 @@ public class UserCreateDTO {
     @Email(message = "Email deve ter formato válido")
     private String email;
 
+    private String cpf;
+
     @NotBlank(message = "Senha é obrigatória")
     private String password;
 

@@ -1,16 +1,19 @@
 package com.vilaagro.api.controller;
 
 import com.vilaagro.api.dto.StatusUpdateDTO;
+import com.vilaagro.api.dto.TerminationRequestDTO;
 import com.vilaagro.api.dto.UserCreateDTO;
 import com.vilaagro.api.dto.UserResponseDTO;
 import com.vilaagro.api.dto.UserUpdateDTO;
 import com.vilaagro.api.model.AccountStatus;
+import com.vilaagro.api.service.CustomUserDetailsService;
 import com.vilaagro.api.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -45,6 +48,20 @@ public class UserController {
     public ResponseEntity<List<UserResponseDTO>> getAllUsers() {
         List<UserResponseDTO> users = userService.getAllUsers();
         return ResponseEntity.ok(users);
+    }
+
+    /**
+     * Lista comerciantes públicos - Endpoint público para visitantes
+     * Retorna apenas usuários ativos (não-admin)
+     */
+    @GetMapping("/public")
+    public ResponseEntity<List<UserResponseDTO>> getPublicMerchants() {
+        List<UserResponseDTO> merchants = userService.getAllUsers()
+                .stream()
+                .filter(user -> user.getType() != com.vilaagro.api.model.UserType.ADMIN)
+                .filter(user -> user.getDocumentsStatus() == AccountStatus.ACTIVE)
+                .collect(java.util.stream.Collectors.toList());
+        return ResponseEntity.ok(merchants);
     }
 
     /**
@@ -118,5 +135,17 @@ public class UserController {
         UserResponseDTO current = userService.getCurrentAuthenticatedUser();
         UserResponseDTO updated = userService.updateUser(current.getId(), updateDTO);
         return ResponseEntity.ok(updated);
+    }
+
+    /**
+     * Solicita desligamento do usuário - Usuário autenticado
+     */
+    @PostMapping("/termination")
+    public ResponseEntity<Void> submitTermination(
+            @Valid @RequestBody TerminationRequestDTO terminationRequest,
+            @AuthenticationPrincipal CustomUserDetailsService.CustomUserPrincipal currentUser
+    ) {
+        userService.submitTermination(currentUser.getUser().getId(), terminationRequest);
+        return ResponseEntity.ok().build();
     }
 }

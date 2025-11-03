@@ -1,6 +1,7 @@
 package com.vilaagro.api.dto;
 
 import com.vilaagro.api.model.Absence;
+import com.vilaagro.api.model.AbsenceType;
 import com.vilaagro.api.model.JustificationForAbsence;
 import lombok.Builder;
 import lombok.Data;
@@ -15,6 +16,7 @@ public class AbsenceResponseDTO {
     private UUID id;
     private UUID userId;
     private LocalDate date;
+    private AbsenceType type;
     private Boolean isAccepted;
     private JustificationResponseDTO justification;
     private LocalDateTime createdAt;
@@ -38,6 +40,7 @@ public class AbsenceResponseDTO {
                 .id(absence.getId())
                 .userId(absence.getUser().getId())
                 .date(absence.getDate())
+                .type(absence.getType())
                 .isAccepted(absence.getIsAccepted())
                 .justification(justifDTO)
                 .createdAt(absence.getCreatedAt())

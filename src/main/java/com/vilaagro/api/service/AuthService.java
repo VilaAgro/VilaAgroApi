@@ -4,6 +4,7 @@ import com.vilaagro.api.dto.LoginRequestDTO;
 import com.vilaagro.api.dto.UserCreateDTO;
 import com.vilaagro.api.dto.UserResponseDTO;
 import com.vilaagro.api.exception.EmailAlreadyExistsException;
+import com.vilaagro.api.model.AccountStatus;
 import com.vilaagro.api.model.User;
 import com.vilaagro.api.repository.UserRepository;
 import com.vilaagro.api.service.CustomUserDetailsService.CustomUserPrincipal;
@@ -52,19 +53,33 @@ public class AuthService {
      * Registra um novo usuário e realiza login automático
      */
     public UserResponseDTO registerUser(UserCreateDTO createDTO, HttpServletResponse response) {
+        // Verifica se o email já existe
         if (userRepository.existsByEmail(createDTO.getEmail())) {
             throw new EmailAlreadyExistsException(createDTO.getEmail());
         }
 
+        // Armazena a senha original para login posterior
         String originalPassword = createDTO.getPassword();
 
+        // Hash da senha antes de criar o usuário
+        String hashedPassword = passwordEncoder.encode(createDTO.getPassword());
+        createDTO.setPassword(hashedPassword);
+
+        // Define status padrão como PENDING - requer aprovação do admin
+        if (createDTO.getDocumentsStatus() == null) {
+            createDTO.setDocumentsStatus(AccountStatus.PENDING);
+        }
+
+        // Cria o usuário
         UserResponseDTO user = userService.createUser(createDTO);
 
+        // Realiza login automático após registro usando a senha original
         authenticateAndSetCookies(createDTO.getEmail(), user.getId().toString(),
-                user.getType().name(), response);
+                                user.getType().name(), response);
 
         return user;
     }
+
     /**
      * Autentica um usuário existente
      */

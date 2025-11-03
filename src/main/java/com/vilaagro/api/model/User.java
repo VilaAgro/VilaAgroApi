@@ -35,6 +35,9 @@ public class User {
     @Column(nullable = false, unique = true, length = 255)
     private String email;
 
+    @Column(unique = true, length = 11)
+    private String cpf;
+
     @Column(nullable = false, length = 255)
     private String password;
 

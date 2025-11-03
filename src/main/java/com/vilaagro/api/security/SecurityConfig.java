@@ -62,11 +62,20 @@ public class SecurityConfig {
                 // Configura CORS
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
+                // Libera o uso de iframe na mesma origem (necessário para o H2 Console)
+                .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
+
                 // Configura autorização de requisições
                 .authorizeHttpRequests(auth -> auth
                         // Endpoints públicos - não requerem autenticação
                         .requestMatchers(
                                 "/api/auth/**",
+                                "/api/users/public",
+                                "/api/attractions/**",
+                                "/api/fairs/**",
+                                "/api/notifications/**",
+                                "/courses/**",
+                                "/api/sale-points/**",
                                 "/error",
                                 "/actuator/health",
                                 "/swagger-ui/**",
@@ -91,6 +100,7 @@ public class SecurityConfig {
 
         return http.build();
     }
+
 
     /**
      * Configura o CORS para permitir requisições do frontend
