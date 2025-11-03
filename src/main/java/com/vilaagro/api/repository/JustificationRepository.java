@@ -15,4 +15,6 @@ public interface JustificationRepository extends JpaRepository<JustificationForA
     // Busca justificativas pendentes de análise (RF-D.1.5)
     @Query("SELECT j FROM JustificationForAbsence j WHERE j.isApproved IS NULL OR j.isApproved = false")
     List<JustificationForAbsence> findPendingJustifications();
+
+    long countByIsApprovedIsNull();
 }
