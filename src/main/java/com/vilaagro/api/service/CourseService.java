@@ -11,6 +11,16 @@ import com.vilaagro.api.repository.CourseRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.vilaagro.api.model.CoursePresence;
+import com.vilaagro.api.model.CoursePresenceId;
+import com.vilaagro.api.model.User;
+import com.vilaagro.api.model.UserType;
+import com.vilaagro.api.dto.UserResponseDTO;
+import com.vilaagro.api.repository.CoursePresenceRepository;
+import com.vilaagro.api.repository.UserRepository;
+import org.springframework.security.access.AccessDeniedException;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -27,6 +37,10 @@ public class CourseService {
 
     private final CourseRepository courseRepository;
     private final AddressRepository addressRepository;
+
+    private final CoursePresenceRepository coursePresenceRepository;
+    private final UserRepository userRepository;
+    private final UserService userService; // Para converter User -> DTO
 
     /**
      * Cria um novo curso
@@ -143,4 +157,82 @@ public class CourseService {
                 .updatedAt(course.getUpdatedAt())
                 .build();
     }
+
+    /**
+     * Inscreve o usuário logado em um curso (RF-C.4.2)
+     */
+    public CourseResponseDTO enrollInCourse(UUID courseId, User currentUser) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new ResourceNotFoundException("Curso", "id", courseId));
+
+        // Regra de Negócio: Admins não podem se inscrever em cursos
+        if (currentUser.getType() == UserType.ADMIN) {
+            throw new AccessDeniedException("Administradores não podem se inscrever em cursos.");
+        }
+
+        // RN-C.4.1: O use case menciona limite de vagas,
+        // mas o schema do banco (Course, db.sql) não possui um campo 'vagas'.
+        // Portanto, pulamos a verificação de limite de vagas.
+
+        CoursePresenceId enrollmentId = new CoursePresenceId(currentUser.getId(), courseId);
+        if (coursePresenceRepository.existsById(enrollmentId)) {
+            throw new IllegalStateException("Você já está inscrito neste curso.");
+        }
+
+        CoursePresence enrollment = CoursePresence.builder()
+                .id(enrollmentId)
+                .user(currentUser)
+                .course(course)
+                .build();
+
+        coursePresenceRepository.save(enrollment);
+        return convertToResponseDTO(course);
+    }
+
+    /**
+     * Cancela a inscrição do usuário logado em um curso (RF-C.4)
+     */
+    public void cancelEnrollment(UUID courseId, User currentUser) {
+        CoursePresenceId enrollmentId = new CoursePresenceId(currentUser.getId(), courseId);
+
+        CoursePresence enrollment = coursePresenceRepository.findById(enrollmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Inscrição", "id", enrollmentId));
+
+        // Validação extra (embora a chave composta já garanta)
+        if (!enrollment.getUser().getId().equals(currentUser.getId())) {
+            throw new AccessDeniedException("Você não tem permissão para cancelar esta inscrição.");
+        }
+
+        coursePresenceRepository.delete(enrollment);
+    }
+
+    /**
+     * Lista os cursos em que o usuário logado está inscrito (RF-C.4.3)
+     */
+    @Transactional(readOnly = true)
+    public List<CourseResponseDTO> getMyEnrolledCourses(User currentUser) {
+        return coursePresenceRepository.findByUserId(currentUser.getId())
+                .stream()
+                .map(CoursePresence::getCourse)
+                .map(this::convertToResponseDTO) // Reusa o conversor do CourseService
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Admin: Lista os usuários inscritos em um curso específico (RF-D.5.4)
+     */
+    @Transactional(readOnly = true)
+    public List<UserResponseDTO> getEnrolledUsersForCourse(UUID courseId) {
+        if (!courseRepository.existsById(courseId)) {
+            throw new ResourceNotFoundException("Curso", "id", courseId);
+        }
+
+        return coursePresenceRepository.findByCourseId(courseId)
+                .stream()
+                .map(CoursePresence::getUser)
+                .map(userService::convertToResponseDTO) // Usa o conversor do UserService
+                .collect(Collectors.toList());
+    }
+
+
 }
