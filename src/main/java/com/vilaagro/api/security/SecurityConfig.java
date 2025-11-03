@@ -70,6 +70,12 @@ public class SecurityConfig {
                         // Endpoints públicos - não requerem autenticação
                         .requestMatchers(
                                 "/api/auth/**",
+                                "/api/users/public",
+                                "/api/attractions/**",
+                                "/api/fairs/**",
+                                "/api/notifications/**",
+                                "/courses/**",
+                                "/api/sale-points/**",
                                 "/error",
                                 "/actuator/health",
                                 "/swagger-ui/**",

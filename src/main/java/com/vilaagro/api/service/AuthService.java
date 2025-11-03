@@ -4,6 +4,7 @@ import com.vilaagro.api.dto.LoginRequestDTO;
 import com.vilaagro.api.dto.UserCreateDTO;
 import com.vilaagro.api.dto.UserResponseDTO;
 import com.vilaagro.api.exception.EmailAlreadyExistsException;
+import com.vilaagro.api.model.AccountStatus;
 import com.vilaagro.api.model.User;
 import com.vilaagro.api.repository.UserRepository;
 import com.vilaagro.api.service.CustomUserDetailsService.CustomUserPrincipal;
@@ -63,6 +64,11 @@ public class AuthService {
         // Hash da senha antes de criar o usuário
         String hashedPassword = passwordEncoder.encode(createDTO.getPassword());
         createDTO.setPassword(hashedPassword);
+
+        // Define status padrão como PENDING - requer aprovação do admin
+        if (createDTO.getDocumentsStatus() == null) {
+            createDTO.setDocumentsStatus(AccountStatus.PENDING);
+        }
 
         // Cria o usuário
         UserResponseDTO user = userService.createUser(createDTO);

@@ -36,6 +36,11 @@ public class Absence {
     @Column(nullable = false)
     private LocalDate date;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private AbsenceType type = AbsenceType.REGISTERED;
+
     @Column(name = "is_accepted")
     private Boolean isAccepted;
 

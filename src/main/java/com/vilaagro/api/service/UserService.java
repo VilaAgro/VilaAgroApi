@@ -1,5 +1,6 @@
 package com.vilaagro.api.service;
 
+import com.vilaagro.api.dto.TerminationRequestDTO;
 import com.vilaagro.api.dto.UserCreateDTO;
 import com.vilaagro.api.dto.UserResponseDTO;
 import com.vilaagro.api.dto.UserUpdateDTO;
@@ -44,6 +45,7 @@ public class UserService {
                 .salePointId(createDTO.getSalePointId())
                 .name(createDTO.getName())
                 .email(createDTO.getEmail())
+                .cpf(createDTO.getCpf())
                 .password(createDTO.getPassword()) // Senha já hashada pelo AuthService
                 .documentsStatus(createDTO.getDocumentsStatus())
                 .type(createDTO.getType())
@@ -149,6 +151,31 @@ public class UserService {
     }
 
     /**
+     * Processa solicitação de desligamento do usuário
+     * Atualiza o status para INACTIVE
+     */
+    public void submitTermination(UUID userId, TerminationRequestDTO terminationRequest) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário", "id", userId));
+
+        // Atualiza status para inativo
+        user.setDocumentsStatus(AccountStatus.INACTIVE);
+        
+        // Log da solicitação
+        System.out.println("Solicitação de desligamento recebida:");
+        System.out.println("Usuário: " + user.getName() + " (" + user.getEmail() + ")");
+        System.out.println("Motivo: " + terminationRequest.getReason());
+        if (terminationRequest.getDetails() != null) {
+            System.out.println("Detalhes: " + terminationRequest.getDetails());
+        }
+        
+        userRepository.save(user);
+        
+        // TODO: Implementar notificação para admin
+        // TODO: Implementar registro de histórico
+    }
+
+    /**
      * Obtém o usuário atualmente autenticado a partir do SecurityContext
      */
     @Transactional(readOnly = true)
@@ -172,6 +199,7 @@ public class UserService {
                 .salePointId(user.getSalePointId())
                 .name(user.getName())
                 .email(user.getEmail())
+                .cpf(user.getCpf())
                 .documentsStatus(user.getDocumentsStatus())
                 .type(user.getType())
                 .createdAt(user.getCreatedAt())

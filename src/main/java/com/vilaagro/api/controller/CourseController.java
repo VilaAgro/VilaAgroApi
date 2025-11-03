@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,9 +25,10 @@ public class CourseController {
     private final CourseService courseService;
 
     /**
-     * Cria um novo curso
+     * Cria um novo curso - Apenas administradores
      */
     @PostMapping
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<CourseResponseDTO> createCourse(@Valid @RequestBody CourseCreateDTO createDTO) {
         CourseResponseDTO createdCourse = courseService.createCourse(createDTO);
         return new ResponseEntity<>(createdCourse, HttpStatus.CREATED);
@@ -69,9 +71,10 @@ public class CourseController {
     }
 
     /**
-     * Atualiza um curso
+     * Atualiza um curso - Apenas administradores
      */
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<CourseResponseDTO> updateCourse(
             @PathVariable UUID id,
             @Valid @RequestBody CourseUpdateDTO updateDTO) {
@@ -80,9 +83,10 @@ public class CourseController {
     }
 
     /**
-     * Deleta um curso
+     * Deleta um curso - Apenas administradores
      */
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<Void> deleteCourse(@PathVariable UUID id) {
         courseService.deleteCourse(id);
         return ResponseEntity.noContent().build();

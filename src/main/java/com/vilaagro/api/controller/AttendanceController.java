@@ -1,10 +1,12 @@
 // VilaAgroApi/src/main/java/com/vilaagro/api/controller/AttendanceController.java
 package com.vilaagro.api.controller;
 
+import com.vilaagro.api.dto.AbsenceNotificationDTO;
 import com.vilaagro.api.dto.AbsenceRegisterDTO;
 import com.vilaagro.api.dto.AbsenceResponseDTO;
+import com.vilaagro.api.dto.AttendanceSummaryDTO;
 import com.vilaagro.api.dto.JustificationCreateDTO;
-import com.vilaagro.api.dto.JustificationResponseDTO; // <-- CORREÇÃO AQUI
+import com.vilaagro.api.dto.JustificationResponseDTO;
 import com.vilaagro.api.dto.JustificationReviewDTO;
 import com.vilaagro.api.model.User;
 import com.vilaagro.api.service.AttendanceService;
@@ -17,6 +19,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
@@ -82,15 +85,22 @@ public class AttendanceController {
 
     /**
      * Comerciante: Envia uma justificativa para uma falta (RF-C.3.2)
+     * Aceita multipart/form-data com arquivo opcional
      */
-    @PostMapping("/absences/{id}/justify")
-    public ResponseEntity<?> submitJustification(
+    @PostMapping(value = "/absences/{id}/justify", consumes = {"multipart/form-data", "application/json"})
+    public ResponseEntity<JustificationResponseDTO> submitJustification(
             @PathVariable UUID id,
-            @Valid @RequestBody JustificationCreateDTO createDTO,
+            @RequestParam("description") String description,
+            @RequestParam(value = "file", required = false) MultipartFile file,
             @AuthenticationPrincipal CustomUserDetailsService.CustomUserPrincipal currentUser
     ) {
-//        var justification = attendanceService.submitJustification(id, createDTO, currentUser.getUser());
-        return ResponseEntity.status(HttpStatus.CREATED).body(""); //(AttendanceController)
+        JustificationCreateDTO createDTO = new JustificationCreateDTO();
+        createDTO.setDescription(description);
+        
+        JustificationResponseDTO justification = attendanceService.submitJustification(
+                id, createDTO, file, currentUser.getUser()
+        );
+        return ResponseEntity.status(HttpStatus.CREATED).body(justification);
     }
 
     /**
@@ -101,5 +111,31 @@ public class AttendanceController {
     public ResponseEntity<List<AbsenceResponseDTO>> getAbsencesForUser(@PathVariable UUID userId) {
         List<AbsenceResponseDTO> absences = attendanceService.getAbsencesByUserId(userId);
         return ResponseEntity.ok(absences);
+    }
+
+    /**
+     * Comerciante: Obtém resumo de frequência dos últimos 12 meses
+     */
+    @GetMapping("/summary")
+    public ResponseEntity<AttendanceSummaryDTO> getAttendanceSummary(
+            @AuthenticationPrincipal CustomUserDetailsService.CustomUserPrincipal currentUser
+    ) {
+        AttendanceSummaryDTO summary = attendanceService.getAttendanceSummary(currentUser.getUser().getId());
+        return ResponseEntity.ok(summary);
+    }
+
+    /**
+     * Comerciante: Notifica ausência futura com motivo
+     */
+    @PostMapping("/absence/notify")
+    public ResponseEntity<AbsenceResponseDTO> notifyAbsence(
+            @Valid @RequestBody AbsenceNotificationDTO notificationDTO,
+            @AuthenticationPrincipal CustomUserDetailsService.CustomUserPrincipal currentUser
+    ) {
+        AbsenceResponseDTO absence = attendanceService.notifyAbsence(
+                currentUser.getUser().getId(),
+                notificationDTO
+        );
+        return ResponseEntity.status(HttpStatus.CREATED).body(absence);
     }
 }
