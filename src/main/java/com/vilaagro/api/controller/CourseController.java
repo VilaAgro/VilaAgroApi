@@ -9,6 +9,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.vilaagro.api.dto.UserResponseDTO;
+import com.vilaagro.api.service.CustomUserDetailsService;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import java.util.List;
 import java.util.UUID;
@@ -86,5 +90,47 @@ public class CourseController {
     public ResponseEntity<Void> deleteCourse(@PathVariable UUID id) {
         courseService.deleteCourse(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/enroll")
+    public ResponseEntity<CourseResponseDTO> enrollInCourse(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal CustomUserDetailsService.CustomUserPrincipal currentUser
+    ) {
+        CourseResponseDTO course = courseService.enrollInCourse(id, currentUser.getUser());
+        return ResponseEntity.status(HttpStatus.CREATED).body(course);
+    }
+
+    /**
+     * Comerciante: Cancela inscrição em um curso (RF-C.4)
+     */
+    @DeleteMapping("/{id}/enroll")
+    public ResponseEntity<Void> cancelEnrollment(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal CustomUserDetailsService.CustomUserPrincipal currentUser
+    ) {
+        courseService.cancelEnrollment(id, currentUser.getUser());
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Comerciante: Lista os cursos em que está inscrito (RF-C.4.3)
+     */
+    @GetMapping("/enrolled/me")
+    public ResponseEntity<List<CourseResponseDTO>> getMyEnrolledCourses(
+            @AuthenticationPrincipal CustomUserDetailsService.CustomUserPrincipal currentUser
+    ) {
+        List<CourseResponseDTO> courses = courseService.getMyEnrolledCourses(currentUser.getUser());
+        return ResponseEntity.ok(courses);
+    }
+
+    /**
+     * Admin: Lista os usuários inscritos em um curso (RF-D.5.4)
+     */
+    @GetMapping("/{id}/enrolled-users")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<List<UserResponseDTO>> getEnrolledUsersForCourse(@PathVariable UUID id) {
+        List<UserResponseDTO> users = courseService.getEnrolledUsersForCourse(id);
+        return ResponseEntity.ok(users);
     }
 }
