@@ -42,4 +42,6 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     List<User> findByDocumentsStatus(AccountStatus documentsStatus);
 
     long countByDocumentsStatus(AccountStatus documentsStatus);
+
+    Optional<User> findByIdAndDocumentsStatus(UUID id, AccountStatus documentsStatus);
 }
