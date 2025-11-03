@@ -11,6 +11,7 @@ import com.vilaagro.api.model.User;
 import com.vilaagro.api.model.AccountStatus;
 import com.vilaagro.api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -26,6 +27,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Transactional
+@Slf4j
 public class UserService {
 
     private final UserRepository userRepository;
@@ -225,5 +227,24 @@ public class UserService {
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .build();
+    }
+
+    public UserResponseDTO requestTermination(User currentUser, TerminationRequestDTO terminationDTO) {
+        User user = userRepository.findById(currentUser.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário", "id", currentUser.getId()));
+
+        // RN-C.5.2: Atualiza o status
+        user.setDocumentsStatus(AccountStatus.REQUESTED_TERMINATION);
+
+        // Remove o usuário do ponto de venda, se estiver alocado
+        user.setSalePointId(null);
+
+        // RN-C.5.2: Registra o motivo (log)
+        log.info("Usuário {} solicitou desligamento. Motivo: {}", user.getEmail(), terminationDTO.getReason());
+
+        // (Se houvesse um campo 'termination_reason' na tabela user, seria setado aqui)
+
+        User updatedUser = userRepository.save(user);
+        return convertToResponseDTO(updatedUser);
     }
 }

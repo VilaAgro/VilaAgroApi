@@ -20,6 +20,9 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.http.HttpHeaders;
 
 import java.util.List;
 import java.util.UUID;
@@ -87,20 +90,35 @@ public class AttendanceController {
      * Comerciante: Envia uma justificativa para uma falta (RF-C.3.2)
      * Aceita multipart/form-data com arquivo opcional
      */
-    @PostMapping(value = "/absences/{id}/justify", consumes = {"multipart/form-data", "application/json"})
-    public ResponseEntity<JustificationResponseDTO> submitJustification(
+    @PostMapping(
+            path = "/absences/{id}/justify",
+            consumes = { MediaType.MULTIPART_FORM_DATA_VALUE } // <-- INFORMA QUE ACEITA ARQUIVOS
+    )
+    public ResponseEntity<?> submitJustification(
             @PathVariable UUID id,
-            @RequestParam("description") String description,
-            @RequestParam(value = "file", required = false) MultipartFile file,
+            @RequestParam("description") String description, // <-- DTO substituído por RequestParam
+            @RequestParam(value = "file", required = false) MultipartFile file, // <-- O ANEXO
             @AuthenticationPrincipal CustomUserDetailsService.CustomUserPrincipal currentUser
     ) {
-        JustificationCreateDTO createDTO = new JustificationCreateDTO();
-        createDTO.setDescription(description);
-        
-        JustificationResponseDTO justification = attendanceService.submitJustification(
-                id, createDTO, file, currentUser.getUser()
-        );
+        var justification = attendanceService.submitJustification(id, description, file, currentUser.getUser());
         return ResponseEntity.status(HttpStatus.CREATED).body(justification);
+    }
+
+    /**
+     * Admin/Comerciante: Baixa o anexo de uma justificativa
+     */
+    @GetMapping("/justifications/{id}/annex")
+    public ResponseEntity<byte[]> getJustificationAnnex(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal CustomUserDetailsService.CustomUserPrincipal currentUser
+    ) {
+        byte[] annexData = attendanceService.getJustificationAnnex(id, currentUser.getUser());
+
+        // Retorna os bytes do arquivo para download
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"anexo.pdf\"") // Assume PDF, já que o DB não guarda o nome
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(annexData);
     }
 
     /**

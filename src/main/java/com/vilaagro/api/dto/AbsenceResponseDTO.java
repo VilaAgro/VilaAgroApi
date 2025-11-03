@@ -32,6 +32,7 @@ public class AbsenceResponseDTO {
                     .description(justification.getDescription())
                     .isApproved(justification.getIsApproved())
                     .approvedByAdminId(justification.getApprovedByAdminId())
+                    .hasAnnex(justification.getAnnex() != null && justification.getAnnex().length > 0)
                     .createdAt(justification.getCreatedAt())
                     .build();
         }

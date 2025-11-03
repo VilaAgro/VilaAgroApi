@@ -1,3 +1,4 @@
+// VilaAgroApi/src/main/java/com/vilaagro/api/converter/AccountStatusConverter.java
 package com.vilaagro.api.converter;
 
 import com.vilaagro.api.model.AccountStatus;
@@ -22,6 +23,7 @@ public class AccountStatusConverter implements AttributeConverter<AccountStatus,
             case ACTIVE: return "Active";
             case DISAPPROVED: return "Disapproved";
             case INACTIVE: return "Inactive";
+            case REQUESTED_TERMINATION: return "Solicitou Desligamento"; // <-- ADICIONE ESTA LINHA
             default: return "Pending";
         }
     }
@@ -38,6 +40,7 @@ public class AccountStatusConverter implements AttributeConverter<AccountStatus,
             case "Active": return AccountStatus.ACTIVE;
             case "Disapproved": return AccountStatus.DISAPPROVED;
             case "Inactive": return AccountStatus.INACTIVE;
+            case "Solicitou Desligamento": return AccountStatus.REQUESTED_TERMINATION; // <-- ADICIONE ESTA LINHA
             default: return AccountStatus.PENDING;
         }
     }

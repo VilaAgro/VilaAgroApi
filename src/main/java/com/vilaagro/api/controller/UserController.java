@@ -148,4 +148,15 @@ public class UserController {
         userService.submitTermination(currentUser.getUser().getId(), terminationRequest);
         return ResponseEntity.ok().build();
     }
+
+    @PostMapping("/me/terminate")
+    public ResponseEntity<UserResponseDTO> requestTermination(
+            @AuthenticationPrincipal CustomUserDetailsService.CustomUserPrincipal currentUser,
+            @RequestBody(required = false) TerminationRequestDTO terminationDTO
+    ) {
+        TerminationRequestDTO dto = (terminationDTO != null) ? terminationDTO : new TerminationRequestDTO();
+
+        UserResponseDTO updatedUser = userService.requestTermination(currentUser.getUser(), dto);
+        return ResponseEntity.ok(updatedUser);
+    }
 }

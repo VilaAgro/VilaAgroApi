@@ -1,3 +1,4 @@
+// VilaAgroApi/src/main/java/com/vilaagro/api/model/AccountStatus.java
 package com.vilaagro.api.model;
 
 /**
@@ -8,7 +9,8 @@ public enum AccountStatus {
     APPROVED("Approved"),
     ACTIVE("Active"),
     DISAPPROVED("Disapproved"),
-    INACTIVE("Inactive");
+    INACTIVE("Inactive"),
+    REQUESTED_TERMINATION("Solicitou Desligamento");
 
     private final String value;
 

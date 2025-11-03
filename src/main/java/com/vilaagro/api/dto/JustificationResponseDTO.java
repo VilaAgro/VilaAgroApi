@@ -14,4 +14,5 @@ public class JustificationResponseDTO {
     private Boolean isApproved;
     private UUID approvedByAdminId;
     private LocalDateTime createdAt;
+    private boolean hasAnnex;
 }

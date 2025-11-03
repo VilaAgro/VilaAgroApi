@@ -35,12 +35,13 @@ public class JustificationForAbsence {
     @Column(columnDefinition = "TEXT", nullable = false)
     private String description;
 
-    // Caminho do arquivo anexado (se houver)
-    @Column(name = "file_path", length = 500)
-    private String filePath;
-
-    @Column(name = "original_file_name", length = 255)
-    private String originalFileName;
+    /**
+     * CORREÇÃO ESTÁ AQUI:
+     * Este campo deve chamar-se 'annex' para corresponder ao @Column(name="annex")
+     * e ao método .annex() do builder.
+     */
+    @Column(name = "annex") // Mapeia a coluna 'annex' do db.sql
+    private byte[] annex;
 
     @Column(name = "is_approved")
     private Boolean isApproved;

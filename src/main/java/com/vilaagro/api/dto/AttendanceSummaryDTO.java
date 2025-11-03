@@ -1,22 +1,17 @@
 package com.vilaagro.api.dto;
 
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
 /**
- * DTO para resumo de frequência do usuário
+ * DTO para o resumo de frequência de um comerciante (RF-C.1.3)
  */
 @Data
 @Builder
-@NoArgsConstructor
-@AllArgsConstructor
 public class AttendanceSummaryDTO {
-    
-    private Integer totalAbsences;
-    private Integer justifiedAbsences;
-    private Integer unjustifiedAbsences;
-    private Integer consecutiveAbsences;
-    private Boolean isCompliant;
+
+    private long totalAbsences;
+    private long justifiedAbsences; // Faltas que foram aprovadas (isAccepted = true)
+    private long pendingJustifications; // Faltas com justif. pendente (isApproved = null)
+    private long unjustifiedAbsences; // Faltas reprovadas ou sem justificativa
 }
