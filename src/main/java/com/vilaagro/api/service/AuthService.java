@@ -4,7 +4,6 @@ import com.vilaagro.api.dto.LoginRequestDTO;
 import com.vilaagro.api.dto.UserCreateDTO;
 import com.vilaagro.api.dto.UserResponseDTO;
 import com.vilaagro.api.exception.EmailAlreadyExistsException;
-import com.vilaagro.api.model.AccountStatus;
 import com.vilaagro.api.model.User;
 import com.vilaagro.api.repository.UserRepository;
 import com.vilaagro.api.service.CustomUserDetailsService.CustomUserPrincipal;
@@ -20,7 +19,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder; // Este import não é mais necessário aqui para o registerUser
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -38,7 +37,7 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final UserService userService;
-    private final PasswordEncoder passwordEncoder;
+    private final PasswordEncoder passwordEncoder; // Ainda necessário para o authenticateUser
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final CustomUserDetailsService userDetailsService;
@@ -61,21 +60,21 @@ public class AuthService {
         // Armazena a senha original para login posterior
         String originalPassword = createDTO.getPassword();
 
-        // Hash da senha antes de criar o usuário
-        String hashedPassword = passwordEncoder.encode(createDTO.getPassword());
-        createDTO.setPassword(hashedPassword);
+        // ***** CORREÇÃO AQUI: REMOVEMOS A CRIPTOGRAFIA *****
+        // A senha agora é passada em texto puro para o UserService,
+        // que será o responsável por criptografá-la.
+        //
+        // String hashedPassword = passwordEncoder.encode(createDTO.getPassword());
+        // createDTO.setPassword(hashedPassword);
+        // ***** FIM DA CORREÇÃO *****
 
-        // Define status padrão como PENDING - requer aprovação do admin
-        if (createDTO.getDocumentsStatus() == null) {
-            createDTO.setDocumentsStatus(AccountStatus.PENDING);
-        }
 
         // Cria o usuário
         UserResponseDTO user = userService.createUser(createDTO);
 
         // Realiza login automático após registro usando a senha original
         authenticateAndSetCookies(createDTO.getEmail(), user.getId().toString(),
-                                user.getType().name(), response);
+                user.getType().name(), response);
 
         return user;
     }
@@ -99,7 +98,7 @@ public class AuthService {
 
             // Gera tokens e define cookies
             authenticateAndSetCookies(user.getEmail(), user.getId().toString(),
-                                    user.getType().name(), response);
+                    user.getType().name(), response);
 
             // Converte para DTO de resposta
             return userService.convertToResponseDTO(user);
@@ -162,7 +161,7 @@ public class AuthService {
 
             // Define o novo access token no cookie
             Cookie accessTokenCookie = createCookie("accessToken", newAccessToken,
-                                                  (int) (accessTokenExpiration / 1000), true, true);
+                    (int) (accessTokenExpiration / 1000), true, true);
             response.addCookie(accessTokenCookie);
 
             log.info("Access token renovado com sucesso para usuário: {}", userEmail);
@@ -213,9 +212,9 @@ public class AuthService {
 
             // Cria cookies seguros HttpOnly (Secure=false para desenvolvimento local)
             Cookie accessTokenCookie = createCookie("accessToken", accessToken,
-                                                  (int) (accessTokenExpiration / 1000), true, false);
+                    (int) (accessTokenExpiration / 1000), true, false);
             Cookie refreshTokenCookie = createCookie("refreshToken", refreshToken,
-                                                   (int) (refreshTokenExpiration / 1000), true, false);
+                    (int) (refreshTokenExpiration / 1000), true, false);
 
             // Adiciona cookies na resposta
             response.addCookie(accessTokenCookie);

@@ -43,12 +43,16 @@ public class UserService {
             throw new EmailAlreadyExistsException(createDTO.getEmail());
         }
 
+        // ***** CORREÇÃO AQUI *****
+        // A senha DEVE ser criptografada aqui, dentro do UserService.
+        String hashedPassword = passwordEncoder.encode(createDTO.getPassword());
+        // ***** FIM DA CORREÇÃO *****
+
         User user = User.builder()
                 .salePointId(createDTO.getSalePointId())
                 .name(createDTO.getName())
                 .email(createDTO.getEmail())
-                .cpf(createDTO.getCpf())
-                .password(createDTO.getPassword()) // Senha já hashada pelo AuthService
+                .password(hashedPassword) // <-- Usamos a senha criptografada
                 .documentsStatus(createDTO.getDocumentsStatus())
                 .type(createDTO.getType())
                 .build();
