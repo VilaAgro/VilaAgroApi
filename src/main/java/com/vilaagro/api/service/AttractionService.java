@@ -127,17 +127,13 @@ public class AttractionService {
     private AttractionResponseDTO convertToResponseDTO(Attraction attraction) {
 
         // Converte a Feira (Fair) para DTO
-        //
         FairResponseDTO fairDTO = FairResponseDTO.builder()
                 .id(attraction.getFair().getId())
-                .name(attraction.getFair().getName())
                 .date(attraction.getFair().getDate())
-                .timeStart(attraction.getFair().getTimeStart())
-                .timeEnd(attraction.getFair().getTimeEnd())
                 .status(attraction.getFair().getStatus())
                 .build();
 
-        // Converte o Artista (Artist) para DTO (que criamos)
+        // Converte o Artista (Artist) para DTO
         ArtistResponseDTO artistDTO = ArtistResponseDTO.builder()
                 .id(attraction.getArtist().getId())
                 .name(attraction.getArtist().getName())
@@ -147,8 +143,8 @@ public class AttractionService {
 
         return AttractionResponseDTO.builder()
                 .id(attraction.getId())
-                .timeStart(attraction.getTimeStart())
-                .timeEnd(attraction.getTimeEnd())
+                .timeStart(attraction.getTimeStart())  // Horários vêm da Attraction
+                .timeEnd(attraction.getTimeEnd())      // Horários vêm da Attraction
                 .fair(fairDTO)
                 .artist(artistDTO)
                 .build();
