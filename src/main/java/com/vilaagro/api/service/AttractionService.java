@@ -2,13 +2,19 @@ package com.vilaagro.api.service;
 
 import com.vilaagro.api.dto.AttractionCreateDTO;
 import com.vilaagro.api.dto.AttractionResponseDTO;
+import com.vilaagro.api.dto.ArtistResponseDTO; // DTO que criamos
+import com.vilaagro.api.dto.FairResponseDTO;
 import com.vilaagro.api.exception.ResourceNotFoundException;
+import com.vilaagro.api.model.Artist;
 import com.vilaagro.api.model.Attraction;
+import com.vilaagro.api.model.Fair;
+import com.vilaagro.api.repository.ArtistRepository; // Repositório que criamos
 import com.vilaagro.api.repository.AttractionRepository;
+import com.vilaagro.api.repository.FairRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.multipart.MultipartFile; // Removido dos métodos create/update
 
 import java.time.LocalDate;
 import java.util.List;
@@ -21,77 +27,130 @@ import java.util.stream.Collectors;
 public class AttractionService {
 
     private final AttractionRepository attractionRepository;
-    private final FileStorageService fileStorageService;
+    private final FairRepository fairRepository; //
+    private final ArtistRepository artistRepository; // (Criado na etapa anterior)
+
+    /**
+     * Cria uma nova atração (agendamento)
+     * [Esta é a lógica que faltava]
+     */
+    public AttractionResponseDTO createAttraction(AttractionCreateDTO createDTO) {
+
+        // 1. Validar as Foreign Keys
+        Fair fair = fairRepository.findById(createDTO.getFairId())
+                .orElseThrow(() -> new ResourceNotFoundException("Feira (Fair)", "id", createDTO.getFairId()));
+
+        Artist artist = artistRepository.findById(createDTO.getArtistId())
+                .orElseThrow(() -> new ResourceNotFoundException("Artista", "id", createDTO.getArtistId()));
+
+        // 2. Criar a Entidade
+        Attraction attraction = new Attraction();
+        attraction.setFair(fair);
+        attraction.setArtist(artist);
+        attraction.setTimeStart(createDTO.getTimeStart());
+        attraction.setTimeEnd(createDTO.getTimeEnd());
+
+        // 3. Salvar
+        Attraction savedAttraction = attractionRepository.save(attraction);
+
+        // 4. Retornar
+        return convertToResponseDTO(savedAttraction);
+    }
+
+    /**
+     * Atualiza uma atração (agendamento)
+     * [Esta é a lógica que faltava]
+     */
+    public AttractionResponseDTO updateAttraction(UUID id, AttractionCreateDTO updateDTO) {
+        // 1. Encontrar a atração existente
+        Attraction attraction = attractionRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Atração", "id", id));
+
+        // 2. Validar as novas Foreign Keys (se elas mudaram)
+        if (!attraction.getFair().getId().equals(updateDTO.getFairId())) {
+            Fair fair = fairRepository.findById(updateDTO.getFairId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Feira (Fair)", "id", updateDTO.getFairId()));
+            attraction.setFair(fair);
+        }
+
+        if (!attraction.getArtist().getId().equals(updateDTO.getArtistId())) {
+            Artist artist = artistRepository.findById(updateDTO.getArtistId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Artista", "id", updateDTO.getArtistId()));
+            attraction.setArtist(artist);
+        }
+
+        // 3. Atualizar os horários
+        attraction.setTimeStart(updateDTO.getTimeStart());
+        attraction.setTimeEnd(updateDTO.getTimeEnd());
+
+        // 4. Salvar
+        Attraction updatedAttraction = attractionRepository.save(attraction);
+
+        // 5. Retornar
+        return convertToResponseDTO(updatedAttraction);
+    }
+
+    // --- Métodos de Listagem (necessários para o Controller) ---
 
     @Transactional(readOnly = true)
     public List<AttractionResponseDTO> getAllAttractions() {
-        return attractionRepository.findAll()
-                .stream()
-                .map(AttractionResponseDTO::fromEntity)
+        return attractionRepository.findAll().stream()
+                .map(this::convertToResponseDTO)
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public List<AttractionResponseDTO> getUpcomingAttractions() {
-        return attractionRepository.findByDateGreaterThanEqualOrderByDateAsc(LocalDate.now())
-                .stream()
-                .map(AttractionResponseDTO::fromEntity)
+        // Busca feiras futuras e, a partir delas, as atrações
+        LocalDate today = LocalDate.now();
+        List<Fair> upcomingFairs = fairRepository.findByDateGreaterThanEqualOrderByDateAsc(today);
+
+        return upcomingFairs.stream()
+                .flatMap(fair -> fair.getAttractions().stream()) // Pega as atrações de cada feira
+                .map(this::convertToResponseDTO)
                 .collect(Collectors.toList());
     }
 
-    public AttractionResponseDTO createAttraction(AttractionCreateDTO createDTO, MultipartFile image) {
-        String imageUrl = null;
-        if (image != null && !image.isEmpty()) {
-            imageUrl = fileStorageService.storeFile(image, "attractions");
-        } else if (createDTO.getImageUrl() != null) {
-            imageUrl = createDTO.getImageUrl();
-        }
-
-        Attraction attraction = Attraction.builder()
-                .name(createDTO.getName())
-                .genre(createDTO.getGenre())
-                .date(createDTO.getDate())
-                .time(createDTO.getTime())
-                .imageUrl(imageUrl)
-                .description(createDTO.getDescription())
-                .build();
-
-        Attraction saved = attractionRepository.save(attraction);
-        return AttractionResponseDTO.fromEntity(saved);
-    }
-
-    public AttractionResponseDTO updateAttraction(UUID id, AttractionCreateDTO updateDTO, MultipartFile image) {
-        Attraction attraction = attractionRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Atração", "id", id));
-
-        if (image != null && !image.isEmpty()) {
-            // Delete old image if exists
-            if (attraction.getImageUrl() != null) {
-                fileStorageService.deleteFile(attraction.getImageUrl());
-            }
-            attraction.setImageUrl(fileStorageService.storeFile(image, "attractions"));
-        } else if (updateDTO.getImageUrl() != null) {
-            attraction.setImageUrl(updateDTO.getImageUrl());
-        }
-
-        attraction.setName(updateDTO.getName());
-        attraction.setGenre(updateDTO.getGenre());
-        attraction.setDate(updateDTO.getDate());
-        attraction.setTime(updateDTO.getTime());
-        attraction.setDescription(updateDTO.getDescription());
-
-        Attraction updated = attractionRepository.save(attraction);
-        return AttractionResponseDTO.fromEntity(updated);
-    }
+    // --- Método de Delete (necessário para o Controller) ---
 
     public void deleteAttraction(UUID id) {
-        Attraction attraction = attractionRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Atração", "id", id));
-        
-        if (attraction.getImageUrl() != null) {
-            fileStorageService.deleteFile(attraction.getImageUrl());
+        if (!attractionRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Atração", "id", id);
         }
-        
-        attractionRepository.delete(attraction);
+        attractionRepository.deleteById(id);
+    }
+
+
+    /**
+     * Converte a Entidade Attraction em DTO de Resposta
+     */
+    private AttractionResponseDTO convertToResponseDTO(Attraction attraction) {
+
+        // Converte a Feira (Fair) para DTO
+        //
+        FairResponseDTO fairDTO = FairResponseDTO.builder()
+                .id(attraction.getFair().getId())
+                .name(attraction.getFair().getName())
+                .date(attraction.getFair().getDate())
+                .timeStart(attraction.getFair().getTimeStart())
+                .timeEnd(attraction.getFair().getTimeEnd())
+                .status(attraction.getFair().getStatus())
+                .build();
+
+        // Converte o Artista (Artist) para DTO (que criamos)
+        ArtistResponseDTO artistDTO = ArtistResponseDTO.builder()
+                .id(attraction.getArtist().getId())
+                .name(attraction.getArtist().getName())
+                .genre(attraction.getArtist().getGenre())
+                .hasBanner(attraction.getArtist().getBanner() != null && attraction.getArtist().getBanner().length > 0)
+                .build();
+
+        return AttractionResponseDTO.builder()
+                .id(attraction.getId())
+                .timeStart(attraction.getTimeStart())
+                .timeEnd(attraction.getTimeEnd())
+                .fair(fairDTO)
+                .artist(artistDTO)
+                .build();
     }
 }

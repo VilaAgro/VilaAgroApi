@@ -17,4 +17,6 @@ public interface FairRepository extends JpaRepository<Fair, UUID> {
     
     @Query("SELECT f FROM Fair f WHERE MONTH(f.date) = :month AND YEAR(f.date) = :year ORDER BY f.date ASC")
     List<Fair> findByMonthAndYear(@Param("month") int month, @Param("year") int year);
+
+    List<Fair> findByDateGreaterThanEqualOrderByDateAsc(LocalDate today);
 }

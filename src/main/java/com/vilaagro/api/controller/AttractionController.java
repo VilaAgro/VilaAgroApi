@@ -1,3 +1,4 @@
+// VilaAgroApi/src/main/java/com/vilaagro/api/controller/AttractionController.java
 package com.vilaagro.api.controller;
 
 import com.vilaagro.api.dto.AttractionCreateDTO;
@@ -9,16 +10,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.RequestParam;
-import java.time.LocalTime;
-import java.util.UUID;
+// Remova todos os imports de MultipartFile, MediaType, RequestParam
 
 import java.util.List;
+import java.util.UUID;
 
 /**
- * Controller para atrações/shows da feira
+ * Controller para atrações/shows da feira (Agendamentos)
+ * [CORRIGIDO: Condizente com o db.sql, aceita apenas JSON]
  */
 @RestController
 @RequestMapping("/api/attractions")
@@ -47,50 +46,34 @@ public class AttractionController {
 
     /**
      * Cria uma nova atração - Admin
+     * [CORRIGIDO: Removido 'consumes' e '@RequestParam'. Usa '@RequestBody' JSON padrão]
      */
-    @PostMapping(consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
+    @PostMapping
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<AttractionResponseDTO> createAttraction(
-            // Em vez de @RequestPart("attraction") AttractionCreateDTO dto,
-            // use @RequestParam para cada campo:
-            @RequestParam("fair_id") UUID fairId,
-            @RequestParam("artist_id") UUID artistId,
-            @RequestParam("time_start") LocalTime timeStart,
-            @RequestParam("time_end") LocalTime timeEnd,
-
-            // Opcional: O 'banner' do artista
-            // Se o arquivo for o banner do ARTISTA, ele deveria ser enviado
-            // no CRUD de Artista, não aqui.
-            // Se for um banner da ATRAÇÃO, o schema do db.sql não tem um campo para isso.
-
-            // Vamos assumir que o 'file' é o 'banner' do Artista (mesmo que seja estranho aqui):
-            @RequestParam(value = "file", required = false) MultipartFile file
+            @Valid @RequestBody AttractionCreateDTO createDTO
     ) {
+        // O DTO
+        // já contém fairId, artistId, timeStart, timeEnd.
 
-        // 1. Crie o DTO manualmente aqui dentro
-        AttractionCreateDTO createDTO = new AttractionCreateDTO();
-        createDTO.setFairId(fairId);
-        createDTO.setArtistId(artistId);
-        createDTO.setTimeStart(timeStart);
-        createDTO.setTimeEnd(timeEnd);
-
-        // 2. Chame seu serviço
-        // (O 'file' provavelmente deveria ir para o ArtistService, não o AttractionService)
-        AttractionResponseDTO newAttraction = attractionService.createAttraction(createDTO, file);
+        // O serviço agora só recebe o DTO, sem arquivo.
+        AttractionResponseDTO newAttraction = attractionService.createAttraction(createDTO);
 
         return new ResponseEntity<>(newAttraction, HttpStatus.CREATED);
     }
 
     /**
      * Atualiza uma atração - Admin
+     * [CORRIGIDO: Removido 'consumes' e '@RequestPart'. Usa '@RequestBody' JSON padrão]
      */
-    @PutMapping(value = "/{id}", consumes = {"multipart/form-data"})
+    @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<AttractionResponseDTO> updateAttraction(
             @PathVariable UUID id,
-            @Valid @RequestPart("attraction") AttractionCreateDTO updateDTO,
-            @RequestPart(value = "image", required = false) MultipartFile image
+            @Valid @RequestBody AttractionCreateDTO updateDTO
     ) {
-        AttractionResponseDTO updated = attractionService.updateAttraction(id, updateDTO, image);
+        // O serviço agora só recebe o DTO, sem arquivo.
+        AttractionResponseDTO updated = attractionService.updateAttraction(id, updateDTO);
         return ResponseEntity.ok(updated);
     }
 
