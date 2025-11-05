@@ -10,5 +10,5 @@ import java.util.UUID;
 
 @Repository
 public interface AttractionRepository extends JpaRepository<Attraction, UUID> {
-    List<Attraction> findByDateGreaterThanEqualOrderByDateAsc(LocalDate date);
+    List<Attraction> findByFairDateGreaterThanEqualOrderByFairDateAsc(LocalDate date);
 }

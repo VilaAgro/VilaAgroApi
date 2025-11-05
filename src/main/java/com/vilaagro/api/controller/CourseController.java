@@ -22,7 +22,7 @@ import java.util.UUID;
  * Controller REST para gerenciamento de cursos
  */
 @RestController
-@RequestMapping("/courses")
+@RequestMapping("/api/courses")
 @RequiredArgsConstructor
 public class CourseController {
 

@@ -1,10 +1,14 @@
 package com.vilaagro.api.controller;
 
 import com.vilaagro.api.dto.AttractionResponseDTO;
+import com.vilaagro.api.dto.FairCreateDTO;
 import com.vilaagro.api.dto.FairResponseDTO;
 import com.vilaagro.api.service.FairService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,6 +23,39 @@ import java.util.UUID;
 public class FairController {
 
     private final FairService fairService;
+
+    /**
+     * Admin: Cria uma nova feira
+     */
+    @PostMapping
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<FairResponseDTO> createFair(@Valid @RequestBody FairCreateDTO createDTO) {
+        FairResponseDTO createdFair = fairService.createFair(createDTO);
+        return new ResponseEntity<>(createdFair, HttpStatus.CREATED);
+    }
+
+    /**
+     * Admin: Atualiza uma feira
+     */
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<FairResponseDTO> updateFair(
+            @PathVariable UUID id,
+            @Valid @RequestBody FairCreateDTO updateDTO
+    ) {
+        FairResponseDTO updatedFair = fairService.updateFair(id, updateDTO);
+        return ResponseEntity.ok(updatedFair);
+    }
+
+    /**
+     * Admin: Deleta uma feira
+     */
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<Void> deleteFair(@PathVariable UUID id) {
+        fairService.deleteFair(id);
+        return ResponseEntity.noContent().build();
+    }
 
     /**
      * Lista todas as feiras ou filtra por mês/ano - Público

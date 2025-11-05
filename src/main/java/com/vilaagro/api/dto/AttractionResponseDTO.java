@@ -1,6 +1,7 @@
 // VilaAgroApi/src/main/java/com/vilaagro/api/dto/AttractionResponseDTO.java
 package com.vilaagro.api.dto;
 
+import com.vilaagro.api.model.Attraction;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -14,14 +15,19 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AttractionResponseDTO {
-
     private UUID id;
     private LocalTime timeStart;
     private LocalTime timeEnd;
-
-    // Detalhes da Feira (Assumindo que FairResponseDTO existe)
     private FairResponseDTO fair;
-
-    // Detalhes do Artista (Este DTO foi criado na etapa anterior)
     private ArtistResponseDTO artist;
+
+    public static AttractionResponseDTO fromEntity(Attraction attraction) {
+        return AttractionResponseDTO.builder()
+                .id(attraction.getId())
+                .timeStart(attraction.getTimeStart())
+                .timeEnd(attraction.getTimeEnd())
+                .fair(attraction.getFair() != null ? FairResponseDTO.fromEntity(attraction.getFair()) : null)
+                .artist(attraction.getArtist() != null ? ArtistResponseDTO.fromEntity(attraction.getArtist()) : null)
+                .build();
+    }
 }

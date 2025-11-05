@@ -53,10 +53,6 @@ public class AttractionController {
     public ResponseEntity<AttractionResponseDTO> createAttraction(
             @Valid @RequestBody AttractionCreateDTO createDTO
     ) {
-        // O DTO
-        // já contém fairId, artistId, timeStart, timeEnd.
-
-        // O serviço agora só recebe o DTO, sem arquivo.
         AttractionResponseDTO newAttraction = attractionService.createAttraction(createDTO);
 
         return new ResponseEntity<>(newAttraction, HttpStatus.CREATED);

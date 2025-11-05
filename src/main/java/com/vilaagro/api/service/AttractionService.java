@@ -14,7 +14,7 @@ import com.vilaagro.api.repository.FairRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile; // Removido dos métodos create/update
+// Remova o import do MultipartFile, se houver
 
 import java.time.LocalDate;
 import java.util.List;
@@ -27,12 +27,11 @@ import java.util.stream.Collectors;
 public class AttractionService {
 
     private final AttractionRepository attractionRepository;
-    private final FairRepository fairRepository; //
-    private final ArtistRepository artistRepository; // (Criado na etapa anterior)
+    private final FairRepository fairRepository;
+    private final ArtistRepository artistRepository;
 
     /**
      * Cria uma nova atração (agendamento)
-     * [Esta é a lógica que faltava]
      */
     public AttractionResponseDTO createAttraction(AttractionCreateDTO createDTO) {
 
@@ -54,12 +53,13 @@ public class AttractionService {
         Attraction savedAttraction = attractionRepository.save(attraction);
 
         // 4. Retornar
-        return convertToResponseDTO(savedAttraction);
+        //    *** ESTA É A CORREÇÃO ***
+        // Trocamos o método quebrado pelo método estático null-safe
+        return AttractionResponseDTO.fromEntity(savedAttraction);
     }
 
     /**
      * Atualiza uma atração (agendamento)
-     * [Esta é a lógica que faltava]
      */
     public AttractionResponseDTO updateAttraction(UUID id, AttractionCreateDTO updateDTO) {
         // 1. Encontrar a atração existente
@@ -87,7 +87,8 @@ public class AttractionService {
         Attraction updatedAttraction = attractionRepository.save(attraction);
 
         // 5. Retornar
-        return convertToResponseDTO(updatedAttraction);
+        //    *** ESTA É A CORREÇÃO ***
+        return AttractionResponseDTO.fromEntity(updatedAttraction);
     }
 
     // --- Métodos de Listagem (necessários para o Controller) ---
@@ -95,7 +96,8 @@ public class AttractionService {
     @Transactional(readOnly = true)
     public List<AttractionResponseDTO> getAllAttractions() {
         return attractionRepository.findAll().stream()
-                .map(this::convertToResponseDTO)
+                //    *** ESTA É A CORREÇÃO ***
+                .map(AttractionResponseDTO::fromEntity)
                 .collect(Collectors.toList());
     }
 
@@ -107,7 +109,8 @@ public class AttractionService {
 
         return upcomingFairs.stream()
                 .flatMap(fair -> fair.getAttractions().stream()) // Pega as atrações de cada feira
-                .map(this::convertToResponseDTO)
+                //    *** ESTA É A CORREÇÃO ***
+                .map(AttractionResponseDTO::fromEntity)
                 .collect(Collectors.toList());
     }
 
@@ -122,31 +125,10 @@ public class AttractionService {
 
 
     /**
-     * Converte a Entidade Attraction em DTO de Resposta
+     * REMOVIDO: Este método privado estava causando o NullPointerException
+     *
+     private AttractionResponseDTO convertToResponseDTO(Attraction attraction) {
+     // ... (código quebrado)
+     }
      */
-    private AttractionResponseDTO convertToResponseDTO(Attraction attraction) {
-
-        // Converte a Feira (Fair) para DTO
-        FairResponseDTO fairDTO = FairResponseDTO.builder()
-                .id(attraction.getFair().getId())
-                .date(attraction.getFair().getDate())
-                .status(attraction.getFair().getStatus())
-                .build();
-
-        // Converte o Artista (Artist) para DTO
-        ArtistResponseDTO artistDTO = ArtistResponseDTO.builder()
-                .id(attraction.getArtist().getId())
-                .name(attraction.getArtist().getName())
-                .genre(attraction.getArtist().getGenre())
-                .hasBanner(attraction.getArtist().getBanner() != null && attraction.getArtist().getBanner().length > 0)
-                .build();
-
-        return AttractionResponseDTO.builder()
-                .id(attraction.getId())
-                .timeStart(attraction.getTimeStart())  // Horários vêm da Attraction
-                .timeEnd(attraction.getTimeEnd())      // Horários vêm da Attraction
-                .fair(fairDTO)
-                .artist(artistDTO)
-                .build();
-    }
 }
