@@ -48,12 +48,18 @@ public class UserService {
         String hashedPassword = passwordEncoder.encode(createDTO.getPassword());
         // ***** FIM DA CORREÇÃO *****
 
+        // Define documentsStatus como PENDING se não foi fornecido
+        AccountStatus status = createDTO.getDocumentsStatus() != null 
+            ? createDTO.getDocumentsStatus() 
+            : AccountStatus.PENDING;
+
         User user = User.builder()
                 .salePointId(createDTO.getSalePointId())
                 .name(createDTO.getName())
                 .email(createDTO.getEmail())
+                .cpf(createDTO.getCpf()) // <-- Corrigido: setar CPF
                 .password(hashedPassword) // <-- Usamos a senha criptografada
-                .documentsStatus(createDTO.getDocumentsStatus())
+                .documentsStatus(status) // <-- Corrigido: PENDING por padrão
                 .type(createDTO.getType())
                 .build();
 
