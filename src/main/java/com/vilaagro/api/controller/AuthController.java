@@ -2,15 +2,19 @@ package com.vilaagro.api.controller;
 
 import com.vilaagro.api.dto.AuthResponseDTO;
 import com.vilaagro.api.dto.LoginRequestDTO;
+import com.vilaagro.api.dto.PasswordUpdateDTO;
+import com.vilaagro.api.dto.ProfileUpdateDTO;
 import com.vilaagro.api.dto.UserCreateDTO;
 import com.vilaagro.api.dto.UserResponseDTO;
 import com.vilaagro.api.service.AuthService;
+import com.vilaagro.api.service.CustomUserDetailsService;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -177,6 +181,75 @@ public class AuthController {
                     .build();
 
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+        }
+    }
+
+    /**
+     * Endpoint para atualizar perfil do usuário (nome e email)
+     * PUT /api/auth/profile
+     */
+    @PutMapping("/profile")
+    public ResponseEntity<AuthResponseDTO> updateProfile(
+            @Valid @RequestBody ProfileUpdateDTO profileUpdateDTO,
+            @AuthenticationPrincipal CustomUserDetailsService.CustomUserPrincipal currentUser
+    ) {
+        try {
+            log.info("Tentativa de atualização de perfil");
+
+            UserResponseDTO updatedUser = authService.updateProfile(profileUpdateDTO, currentUser.getUser());
+
+            AuthResponseDTO response = AuthResponseDTO.builder()
+                    .message("Perfil atualizado com sucesso")
+                    .user(updatedUser)
+                    .success(true)
+                    .build();
+
+            log.info("Perfil atualizado com sucesso");
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            log.error("Erro ao atualizar perfil: {}", e.getMessage());
+
+            AuthResponseDTO errorResponse = AuthResponseDTO.builder()
+                    .message(e.getMessage())
+                    .success(false)
+                    .build();
+
+            return ResponseEntity.badRequest().body(errorResponse);
+        }
+    }
+
+    /**
+     * Endpoint para atualizar senha do usuário
+     * PUT /api/auth/password
+     */
+    @PutMapping("/password")
+    public ResponseEntity<AuthResponseDTO> updatePassword(
+            @Valid @RequestBody PasswordUpdateDTO passwordUpdateDTO,
+            @AuthenticationPrincipal CustomUserDetailsService.CustomUserPrincipal currentUser
+    ) {
+        try {
+            log.info("Tentativa de atualização de senha");
+
+            authService.updatePassword(passwordUpdateDTO, currentUser.getUser());
+
+            AuthResponseDTO response = AuthResponseDTO.builder()
+                    .message("Senha atualizada com sucesso")
+                    .success(true)
+                    .build();
+
+            log.info("Senha atualizada com sucesso");
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            log.error("Erro ao atualizar senha: {}", e.getMessage());
+
+            AuthResponseDTO errorResponse = AuthResponseDTO.builder()
+                    .message(e.getMessage())
+                    .success(false)
+                    .build();
+
+            return ResponseEntity.badRequest().body(errorResponse);
         }
     }
 }

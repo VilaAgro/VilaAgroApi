@@ -143,16 +143,23 @@ public class AttendanceController {
     }
 
     /**
-     * Comerciante: Notifica ausência futura com motivo
+     * Comerciante: Notifica ausência futura com motivo e anexo opcional
      */
-    @PostMapping("/absence/notify")
+    @PostMapping(
+            path = "/absence/notify",
+            consumes = { MediaType.MULTIPART_FORM_DATA_VALUE }
+    )
     public ResponseEntity<AbsenceResponseDTO> notifyAbsence(
-            @Valid @RequestBody AbsenceNotificationDTO notificationDTO,
+            @RequestParam("date") String date,
+            @RequestParam("reason") String reason,
+            @RequestParam(value = "file", required = false) MultipartFile file,
             @AuthenticationPrincipal CustomUserDetailsService.CustomUserPrincipal currentUser
     ) {
-        AbsenceResponseDTO absence = attendanceService.notifyAbsence(
+        AbsenceResponseDTO absence = attendanceService.notifyAbsenceWithFile(
                 currentUser.getUser().getId(),
-                notificationDTO
+                date,
+                reason,
+                file
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(absence);
     }
