@@ -14,4 +14,6 @@ public class AttendanceSummaryDTO {
     private long justifiedAbsences; // Faltas que foram aprovadas (isAccepted = true)
     private long pendingJustifications; // Faltas com justif. pendente (isApproved = null)
     private long unjustifiedAbsences; // Faltas reprovadas ou sem justificativa
+    private long consecutiveAbsences; // Faltas consecutivas sem justificativa
+    private boolean isCompliant; // Se o usuário está em conformidade (< 3 consecutivas e < 6 no ano)
 }
