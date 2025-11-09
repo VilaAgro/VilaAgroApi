@@ -72,6 +72,7 @@ public class SecurityConfig {
                                 "/api/auth/**",
                                 "/api/users/public",
                                 "/api/attractions/**",
+                                "/api/artists/*/banner",
                                 "/api/fairs/**",
                                 "/api/notifications/**",
                                 "/courses/**",
