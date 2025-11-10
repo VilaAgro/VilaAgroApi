@@ -1,6 +1,8 @@
 package com.vilaagro.api.service;
 
 import com.vilaagro.api.dto.LoginRequestDTO;
+import com.vilaagro.api.dto.PasswordUpdateDTO;
+import com.vilaagro.api.dto.ProfileUpdateDTO;
 import com.vilaagro.api.dto.UserCreateDTO;
 import com.vilaagro.api.dto.UserResponseDTO;
 import com.vilaagro.api.exception.EmailAlreadyExistsException;
@@ -257,5 +259,58 @@ public class AuthService {
             }
         }
         return null;
+    }
+
+    /**
+     * Atualiza o perfil do usuário autenticado (nome e email)
+     */
+    public UserResponseDTO updateProfile(ProfileUpdateDTO profileUpdateDTO, User user) {
+        try {
+
+            // Verifica se o novo email já está em uso por outro usuário
+            if (!user.getEmail().equals(profileUpdateDTO.getEmail()) &&
+                userRepository.existsByEmail(profileUpdateDTO.getEmail())) {
+                throw new EmailAlreadyExistsException(profileUpdateDTO.getEmail());
+            }
+
+            // Atualiza os dados do usuário
+            user.setName(profileUpdateDTO.getName());
+            user.setEmail(profileUpdateDTO.getEmail());
+
+            // Salva as alterações
+            User updatedUser = userRepository.save(user);
+
+            log.info("Perfil atualizado com sucesso para usuário: {}", updatedUser.getEmail());
+            return userService.convertToResponseDTO(updatedUser);
+
+        } catch (Exception e) {
+            log.error("Erro ao atualizar perfil: {}", e.getMessage());
+            throw e;
+        }
+    }
+
+    /**
+     * Atualiza a senha do usuário autenticado
+     */
+    public void updatePassword(PasswordUpdateDTO passwordUpdateDTO, User user) {
+        try {
+
+            // Verifica se a senha atual está correta
+            if (!passwordEncoder.matches(passwordUpdateDTO.getCurrentPassword(), user.getPassword())) {
+                throw new BadCredentialsException("Senha atual incorreta");
+            }
+
+            // Atualiza a senha
+            user.setPassword(passwordEncoder.encode(passwordUpdateDTO.getNewPassword()));
+
+            // Salva as alterações
+            userRepository.save(user);
+
+            log.info("Senha atualizada com sucesso para usuário: {}", user.getEmail());
+
+        } catch (Exception e) {
+            log.error("Erro ao atualizar senha: {}", e.getMessage());
+            throw e;
+        }
     }
 }

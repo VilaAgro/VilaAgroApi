@@ -46,12 +46,7 @@ public class Fair {
     @Column(nullable = false, length = 20)
     private FairStatus status = FairStatus.scheduled;
 
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-        name = "fair_attractions",
-        joinColumns = @JoinColumn(name = "fair_id"),
-        inverseJoinColumns = @JoinColumn(name = "attraction_id")
-    )
+    @OneToMany(mappedBy = "fair", fetch = FetchType.LAZY)
     private List<Attraction> attractions = new ArrayList<>();
 
     @CreationTimestamp

@@ -36,11 +36,11 @@ public class JustificationForAbsence {
     private String description;
 
     /**
-     * CORREÇÃO ESTÁ AQUI:
-     * Este campo deve chamar-se 'annex' para corresponder ao @Column(name="annex")
-     * e ao método .annex() do builder.
+     * Campo para armazenar anexo (foto/PDF)
+     * @Lob permite arquivos grandes (até limite do multipart: 10MB)
      */
-    @Column(name = "annex") // Mapeia a coluna 'annex' do db.sql
+    @Lob
+    @Column(name = "annex", columnDefinition = "BYTEA")
     private byte[] annex;
 
     @Column(name = "is_approved")

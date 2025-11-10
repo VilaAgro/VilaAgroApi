@@ -15,7 +15,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile; // Import necessário
 import java.io.IOException; // Import necessário
 
+import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -205,8 +207,63 @@ public class AttendanceService {
                 .build();
         JustificationForAbsence savedJustification = justificationRepository.save(justification);
 
-        // 4. Associa a justificativa à ausência e retorna o DTO
-        savedAbsence.setJustification(savedJustification);
+        return AbsenceResponseDTO.fromEntity(savedAbsence);
+    }
+
+    /**
+     * Notifica ausência futura com anexo opcional
+     */
+    public AbsenceResponseDTO notifyAbsenceWithFile(
+            UUID userId,
+            String dateStr,
+            String reason,
+            MultipartFile file
+    ) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário", "id", userId));
+
+        // Parse da data
+        LocalDate date;
+        try {
+            date = LocalDate.parse(dateStr);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Formato de data inválido. Use YYYY-MM-DD");
+        }
+
+        // Verifica duplicata
+        if (absenceRepository.findByUserIdAndDate(userId, date).isPresent()) {
+            throw new IllegalStateException("Já existe uma falta registrada ou notificada para esta data.");
+        }
+
+        // Processa anexo se fornecido
+        byte[] annexBytes = null;
+        if (file != null && !file.isEmpty()) {
+            try {
+                annexBytes = file.getBytes();
+            } catch (IOException e) {
+                log.error("Erro ao ler bytes do anexo", e);
+                throw new RuntimeException("Erro ao processar anexo: " + e.getMessage());
+            }
+        }
+
+        // Cria a Ausência com tipo NOTIFIED (avisada previamente)
+        Absence absence = Absence.builder()
+                .user(user)
+                .date(date)
+                .type(AbsenceType.NOTIFIED)
+                .isAccepted(false)
+                .build();
+        Absence savedAbsence = absenceRepository.save(absence);
+
+        // Cria a Justificativa com anexo
+        JustificationForAbsence justification = JustificationForAbsence.builder()
+                .absence(savedAbsence)
+                .description(reason)
+                .annex(annexBytes)
+                .isApproved(null)
+                .build();
+        justificationRepository.save(justification);
+
         return AbsenceResponseDTO.fromEntity(savedAbsence);
     }
 
@@ -231,11 +288,63 @@ public class AttendanceService {
 
         long unjustified = total - justified - pending;
 
+        // Calcula faltas consecutivas (apenas não justificadas)
+        long consecutiveAbsences = calculateConsecutiveAbsences(absences);
+
+        // Verifica conformidade: < 3 consecutivas E < 6 no ano
+        boolean isCompliant = consecutiveAbsences < 3 && unjustified < 6;
+
         return AttendanceSummaryDTO.builder()
                 .totalAbsences(total)
                 .justifiedAbsences(justified)
                 .pendingJustifications(pending)
                 .unjustifiedAbsences(unjustified)
+                .consecutiveAbsences(consecutiveAbsences)
+                .isCompliant(isCompliant)
                 .build();
+    }
+
+    /**
+     * Calcula o número de faltas consecutivas não justificadas
+     */
+    private long calculateConsecutiveAbsences(List<Absence> absences) {
+        if (absences.isEmpty()) {
+            return 0;
+        }
+
+        // Ordena por data (mais recente primeiro)
+        List<Absence> sortedAbsences = absences.stream()
+                .sorted(Comparator.comparing(Absence::getDate).reversed())
+                .collect(Collectors.toList());
+
+        long maxConsecutive = 0;
+        long currentConsecutive = 0;
+        LocalDate previousDate = null;
+
+        for (Absence absence : sortedAbsences) {
+            // Apenas conta faltas não justificadas
+            if (Boolean.TRUE.equals(absence.getIsAccepted())) {
+                currentConsecutive = 0;
+                previousDate = absence.getDate();
+                continue;
+            }
+
+            if (previousDate == null) {
+                currentConsecutive = 1;
+            } else {
+                // Verifica se é consecutiva (assumindo feiras semanais)
+                long daysBetween = java.time.temporal.ChronoUnit.DAYS.between(absence.getDate(), previousDate);
+                if (daysBetween >= 1 && daysBetween <= 14) { // Até 2 semanas de diferença
+                    currentConsecutive++;
+                } else {
+                    currentConsecutive = 1;
+                }
+            }
+
+            maxConsecutive = Math.max(maxConsecutive, currentConsecutive);
+            previousDate = absence.getDate();
+        }
+
+        return maxConsecutive;
     }
 }

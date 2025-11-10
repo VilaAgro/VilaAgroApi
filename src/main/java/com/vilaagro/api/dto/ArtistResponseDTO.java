@@ -13,12 +13,18 @@ public class ArtistResponseDTO {
     private String name;
     private String genre;
     private boolean hasBanner;
+    private String bannerUrl;
 
     public static ArtistResponseDTO fromEntity(Artist artist) {
+        boolean hasBanner = artist.getBanner() != null && artist.getBanner().length > 0;
+        String bannerUrl = hasBanner ? "/api/artists/" + artist.getId() + "/banner" : null;
+
         return ArtistResponseDTO.builder()
                 .id(artist.getId())
                 .name(artist.getName())
                 .genre(artist.getGenre())
+                .hasBanner(hasBanner)
+                .bannerUrl(bannerUrl)
                 .build();
     }
 }

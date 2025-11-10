@@ -87,15 +87,15 @@ public class ArtistController {
     }
 
     /**
-     * Endpoint público para baixar o banner de um artista
+     * Endpoint público para visualizar o banner de um artista
      */
     @GetMapping("/{id}/banner")
     public ResponseEntity<byte[]> getArtistBanner(@PathVariable UUID id) {
         byte[] bannerData = artistService.getArtistBanner(id);
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"banner.jpg\"")
-                .contentType(MediaType.IMAGE_JPEG) // Assumindo JPEG
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"banner.jpg\"")
+                .contentType(MediaType.IMAGE_JPEG)
                 .body(bannerData);
     }
 }
