@@ -15,11 +15,13 @@ import java.util.UUID;
 public class AbsenceResponseDTO {
     private UUID id;
     private UUID userId;
+    private String userName;
     private LocalDate date;
     private AbsenceType type;
     private Boolean isAccepted;
     private JustificationResponseDTO justification;
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 
     public static AbsenceResponseDTO fromEntity(Absence absence) {
         JustificationResponseDTO justifDTO = null;
@@ -40,11 +42,13 @@ public class AbsenceResponseDTO {
         return AbsenceResponseDTO.builder()
                 .id(absence.getId())
                 .userId(absence.getUser().getId())
+                .userName(absence.getUser().getName())
                 .date(absence.getDate())
                 .type(absence.getType())
                 .isAccepted(absence.getIsAccepted())
                 .justification(justifDTO)
                 .createdAt(absence.getCreatedAt())
+                .updatedAt(absence.getUpdatedAt())
                 .build();
     }
 }

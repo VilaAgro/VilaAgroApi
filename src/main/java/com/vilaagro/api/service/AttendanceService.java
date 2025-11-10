@@ -79,6 +79,17 @@ public class AttendanceService {
     }
 
     /**
+     * Admin: Busca todas as ausências de todos os usuários (RF-D.6.1)
+     */
+    @Transactional(readOnly = true)
+    public List<AbsenceResponseDTO> getAllAbsences() {
+        return absenceRepository.findAllByOrderByDateDesc()
+                .stream()
+                .map(AbsenceResponseDTO::fromEntity)
+                .collect(Collectors.toList());
+    }
+
+    /**
      * User: Envia uma justificativa para uma ausência (RF-C.3.2)
      * (Agora com suporte a anexo RF-C.3.3)
      */
@@ -348,3 +359,4 @@ public class AttendanceService {
         return maxConsecutive;
     }
 }
+

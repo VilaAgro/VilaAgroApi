@@ -52,6 +52,16 @@ public class AttendanceController {
     }
 
     /**
+     * Admin: Lista todas as faltas de todos os usuários (RF-D.6.1)
+     */
+    @GetMapping("/absences")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<List<AbsenceResponseDTO>> getAllAbsences() {
+        List<AbsenceResponseDTO> absences = attendanceService.getAllAbsences();
+        return ResponseEntity.ok(absences);
+    }
+
+    /**
      * Admin: Lista justificativas pendentes (RF-D.6.2)
      */
     @GetMapping("/justifications/pending")
